@@ -7,6 +7,7 @@ export interface User {
   phone: string;
   salary: number;
   bonus: number;
+  avatar?: string; // URL аватарки
   social: SocialLinks;
   documents: Document[];
 }
@@ -73,3 +74,32 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permissions> = {
     viewTeamDocuments: true,
   },
 };
+
+export interface VacationRequest {
+  id: number;
+  userId: number;
+  userName: string;
+  userTeam: string;
+  type: 'vacation' | 'sick';
+  reason: string;
+  startDate: string;
+  endDate: string;
+  status: 'pending' | 'approved' | 'rejected';
+  managerId: number;
+  managerName: string;
+  createdAt: string;
+  updatedAt: string;
+  managerComment?: string;
+}
+
+export interface EmployeeRating {
+  id: number;
+  employeeId: number;
+  managerId: number;
+  managerName: string;
+  rating: number;
+  comment: string;
+  characteristic: string;
+  createdAt: string;
+  updatedAt: string;
+}

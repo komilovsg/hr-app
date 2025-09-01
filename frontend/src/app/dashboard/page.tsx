@@ -2,60 +2,41 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import { User, Document } from '@hr-app/shared';
 import DocumentUpload from '@/components/DocumentUpload';
 import VacationRequestForm from '@/components/VacationRequestForm';
 import VacationRequestsList from '@/components/VacationRequestsList';
 import AvatarDisplay from '@/components/AvatarDisplay';
 import AvatarModal from '@/components/AvatarModal';
+import TeamButton from '@/components/TeamButton';
 
-interface User {
-  id: number;
-  name: string;
-  role: 'employee' | 'manager';
-  team: string;
-  email: string;
-  phone: string;
-  salary: number;
-  bonus: number;
-  avatar?: string; // URL аватарки
-  social: {
-    linkedin?: string;
-    telegram?: string;
-  };
-  documents: Array<{
-    id: number;
-    name: string;
-    type: string;
-    uploadedAt: string;
-  }>;
-}
-
-interface VacationRequest {
+interface VacationRequestLocal {
   id: number;
   userId: number;
   userName: string;
   userTeam: string;
-  type: 'vacation' | 'sick' | 'personal' | 'other';
+  type: 'vacation' | 'sick';
   reason: string;
   startDate: string;
   endDate: string;
   status: 'pending' | 'approved' | 'rejected';
-  managerId?: number;
-  managerName?: string;
+  managerId: number;
+  managerName: string;
   createdAt: string;
   updatedAt: string;
   managerComment?: string;
 }
 
-export default function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isVacationModalOpen, setIsVacationModalOpen] = useState(false);
-  const [vacationRequests, setVacationRequests] = useState<VacationRequest[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<VacationRequest[]>([]);
+export default function Dashboard() {
   const router = useRouter();
-  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false); // Added state for AvatarModal
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [showVacationForm, setShowVacationForm] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [vacationRequests, setVacationRequests] = useState<VacationRequestLocal[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -72,7 +53,7 @@ export default function DashboardPage() {
       console.error('Error parsing user data:', error);
       router.push('/login');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }, [router]);
 
@@ -90,7 +71,8 @@ export default function DashboardPage() {
         const pendingResponse = await fetch(`/api/vacation/pending?managerId=${userObj.id}`);
         if (pendingResponse.ok) {
           const pendingData = await pendingResponse.json();
-          setPendingRequests(pendingData.data || []);
+          // Assuming pendingData.data is an array of VacationRequestLocal
+          setVacationRequests(prev => [...prev, ...(pendingData.data || [])]);
         }
       }
     } catch (error) {
@@ -121,7 +103,7 @@ export default function DashboardPage() {
       const newDocument = {
         id: Date.now(),
         name: documentData.name,
-        type: documentData.type,
+        type: documentData.type as 'passport' | 'contract' | 'other',
         uploadedAt: new Date().toISOString(),
       };
 
@@ -168,7 +150,8 @@ export default function DashboardPage() {
         
         // Если пользователь менеджер, обновляем pending заявки
         if (user.role === 'manager') {
-          setPendingRequests(prev => [newRequest.data, ...prev]);
+          // Assuming newRequest.data is a VacationRequestLocal
+          setVacationRequests(prev => [newRequest.data, ...prev]);
         }
         
         console.log('Vacation request created successfully:', newRequest.data);
@@ -197,7 +180,8 @@ export default function DashboardPage() {
         setVacationRequests(prev => 
           prev.map(req => req.id === requestId ? updatedRequest.data : req)
         );
-        setPendingRequests(prev => 
+        // Assuming updatedRequest.data is a VacationRequestLocal
+        setVacationRequests(prev => 
           prev.filter(req => req.id !== requestId)
         );
         
@@ -222,7 +206,7 @@ export default function DashboardPage() {
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
@@ -261,7 +245,7 @@ export default function DashboardPage() {
                   avatar={user.avatar}
                   userName={user.name}
                   size="sm"
-                  onClick={() => setIsAvatarModalOpen(true)}
+                  onClick={() => setShowAvatarModal(true)}
                 />
                 <span className="text-gray-700 font-medium">{user.email}</span>
               </div>
@@ -286,7 +270,7 @@ export default function DashboardPage() {
                   avatar={user.avatar}
                   userName={user.name}
                   size="lg"
-                  onClick={() => setIsAvatarModalOpen(true)}
+                  onClick={() => setShowAvatarModal(true)}
                   className="mx-auto mb-6"
                 />
                 
@@ -296,15 +280,12 @@ export default function DashboardPage() {
                 </span>
                 <p className="text-gray-600 mt-3 font-medium">{user.team}</p>
                 
-                {/* Team Manager Info for Employees */}
-                {user.role === 'employee' && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">Team Lead команды</p>
-                    <p className="text-sm font-medium text-gray-700">
-                      {user.team === 'frontend' ? 'Далер' : 'Денис'}
-                    </p>
-                  </div>
-                )}
+                {/* Team Button */}
+                <div className="mt-6">
+                  <TeamButton user={user} />
+                </div>
+
+                {/* Documents Section */}
               </div>
               
               <div className="mt-8 space-y-4">
@@ -420,7 +401,7 @@ export default function DashboardPage() {
                   Заявки на отпуск
                 </h3>
                 <button 
-                  onClick={() => setIsVacationModalOpen(true)}
+                  onClick={() => setShowVacationForm(true)}
                   className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-md flex items-center"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -438,7 +419,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Pending Requests for Managers */}
-            {user.role === 'manager' && pendingRequests.length > 0 && (
+            {user.role === 'manager' && (
               <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 hover:shadow-2xl transition-all duration-300">
                 <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
                   <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
@@ -450,7 +431,7 @@ export default function DashboardPage() {
                 </h3>
                 
                 <VacationRequestsList
-                  requests={pendingRequests}
+                  requests={vacationRequests.filter(req => req.status === 'pending')}
                   userRole="manager"
                   onStatusUpdate={handleVacationStatusUpdate}
                 />
@@ -469,7 +450,7 @@ export default function DashboardPage() {
                   Документы
                 </h3>
                 <button 
-                  onClick={() => setIsUploadModalOpen(true)}
+                  onClick={() => setShowDocumentUpload(true)}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-md flex items-center"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -525,22 +506,22 @@ export default function DashboardPage() {
 
       {/* Document Upload Modal */}
       <DocumentUpload
-        isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
+        isOpen={showDocumentUpload}
+        onClose={() => setShowDocumentUpload(false)}
         onUpload={handleDocumentUpload}
       />
 
       {/* Vacation Request Modal */}
       <VacationRequestForm
-        isOpen={isVacationModalOpen}
-        onClose={() => setIsVacationModalOpen(false)}
+        isOpen={showVacationForm}
+        onClose={() => setShowVacationForm(false)}
         onSubmit={handleVacationRequest}
       />
 
       {/* Avatar Modal */}
       <AvatarModal
-        isOpen={isAvatarModalOpen}
-        onClose={() => setIsAvatarModalOpen(false)}
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
         currentAvatar={user?.avatar}
         userName={user?.name || ''}
         onAvatarChange={handleAvatarChange}

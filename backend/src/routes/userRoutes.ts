@@ -1,78 +1,71 @@
-import { Router } from 'express';
+import express from 'express';
 import { mockUsers, findUserById, getTeamMembers } from '../data/mockData';
 
-const router = Router();
+const router = express.Router();
 
-// GET /api/users
+// Получить всех пользователей
 router.get('/', (req, res) => {
-  try {
-    // В будущем здесь будет фильтрация по команде и роли
-    res.json({
-      success: true,
-      data: mockUsers
-    });
-  } catch (error) {
-    console.error('Get users error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Внутренняя ошибка сервера'
-    });
-  }
+  res.json(mockUsers);
 });
 
-// GET /api/users/:id
+// Получить пользователя по ID
 router.get('/:id', (req, res) => {
-  try {
-    const userId = parseInt(req.params.id);
-    
-    if (isNaN(userId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Неверный ID пользователя'
-      });
-    }
-
-    const user = findUserById(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'Пользователь не найден'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: user
-    });
-
-  } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Внутренняя ошибка сервера'
-    });
+  const userId = parseInt(req.params.id);
+  const user = findUserById(userId);
+  
+  if (!user) {
+    return res.status(404).json({ error: 'Пользователь не найден' });
   }
+  
+  res.json(user);
 });
 
-// GET /api/users/team/:team
+// Получить членов команды
 router.get('/team/:team', (req, res) => {
-  try {
-    const { team } = req.params;
-    const teamMembers = getTeamMembers(team);
+  const team = req.params.team;
+  const teamMembers = getTeamMembers(team);
+  res.json(teamMembers);
+});
 
-    res.json({
-      success: true,
-      data: teamMembers
-    });
-
-  } catch (error) {
-    console.error('Get team members error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Внутренняя ошибка сервера'
-    });
+// Получить подчиненных руководителя
+router.get('/manager/:managerId/subordinates', (req, res) => {
+  const managerId = parseInt(req.params.managerId);
+  const manager = findUserById(managerId);
+  
+  if (!manager || manager.role !== 'manager') {
+    return res.status(404).json({ error: 'Руководитель не найден' });
   }
+  
+  const subordinates = mockUsers.filter(user => 
+    user.role === 'employee' && user.team === manager.team
+  );
+  
+  res.json(subordinates);
+});
+
+// Получить рейтинг сотрудника
+router.get('/:userId/rating', (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const user = findUserById(userId);
+  
+  if (!user) {
+    return res.status(404).json({ error: 'Пользователь не найден' });
+  }
+  
+  // Mock данные для рейтинга
+  const mockRating = {
+    id: 1,
+    employeeId: userId,
+    managerId: 2, // Далер для frontend, Денис для backend
+    managerName: user.team === 'frontend' ? 'Далер Алямов' : 'Денис',
+    rating: 4,
+    comment: 'Отличный сотрудник, всегда выполняет задачи в срок',
+    characteristic: 'Высокопроизводительный сотрудник с отличными результатами. Работает в команде ' + user.team + ', демонстрирует командный дух. Проявляет инициативу в решении задач и готов к развитию.',
+    createdAt: '2025-01-01T10:00:00Z',
+    updatedAt: '2025-01-01T10:00:00Z'
+  };
+  
+  res.json(mockRating);
 });
 
 export default router;

@@ -39,7 +39,7 @@ export default function AvatarDisplay({ avatar, userName, size = 'md', onClick, 
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold">
-          {userName.charAt(0).toUpperCase()}
+          {userName && userName.length > 0 ? userName.charAt(0).toUpperCase() : '?'}
         </div>
       )}
     </div>
