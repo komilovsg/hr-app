@@ -1,0 +1,27 @@
+{
+  "name": "hr-system-mvp",
+  "version": "1.0.0",
+  "description": "Система для управления сотрудниками с личными кабинетами, ролями, просмотром зарплат, бонусов и документов",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"yarn dev:frontend\" \"yarn dev:backend\"",
+    "dev:frontend": "yarn workspace frontend dev",
+    "dev:backend": "yarn workspace backend dev",
+    "build": "yarn workspace frontend build && yarn workspace backend build",
+    "install:all": "yarn install",
+    "lint": "yarn workspace frontend lint && yarn workspace backend lint",
+    "type-check": "yarn workspace frontend type-check && yarn workspace backend type-check"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  }
+}

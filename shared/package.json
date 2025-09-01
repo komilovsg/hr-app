@@ -1,0 +1,11 @@
+{
+  "name": "@hr-app/shared",
+  "version": "1.0.0",
+  "description": "Общие типы и утилиты для HR System MVP",
+  "main": "types.ts",
+  "types": "types.ts",
+  "private": true,
+  "dependencies": {
+    "typescript": "^5.0.0"
+  }
+}
