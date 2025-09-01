@@ -67,7 +67,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 2,
-    name: "Далер Алямов",
+    name: "Далер А",
     role: "manager",
     team: "frontend",
     email: "daler@zinda.ai",
@@ -105,7 +105,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 4,
-    name: "Денис",
+    name: "Денис Б",
     role: "manager",
     team: "backend",
     email: "denis@zinda.ai",
